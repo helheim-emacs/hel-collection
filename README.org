@@ -1,0 +1,109 @@
+* [[https://github.com/anuvyklack/hel][Hel]] Collection
+
+#+html: <a href="https://www.gnu.org/software/emacs/"><img alt="GNU Emacs" src="https://img.shields.io/badge/GNU%20Emacs-29.1%2B-7F5AB6?logo=gnuemacs&logoColor=white"></a>
+#+html: <a href="LICENSE"><img alt="License: GPLv3" src="https://img.shields.io/badge/license-GPLv3-blue"></a>
+
+The collection of keybindings for third-party and built-in Emacs packages to
+use them with [[https://github.com/anuvyklack/hel][Hel]].
+
+Bindings are written directly into the package's own keymap — not into Hel
+Emacs state keymap or a per-package minor mode. This is an intentional
+design decision that allows =F1 m= to display them as native keybindings and
+lets you rebind them using the standard Emacs mechanisms.
+
+** Installation
+
+hel-collection is not on MELPA yet. Install it from GitHub, alongside [[https://github.com/anuvyklack/hel][Hel]].
+
+*** Emacs built-in package manager
+
+#+begin_src emacs-lisp
+(use-package hel-collection
+  :vc (:url "https://github.com/anuvyklack/hel-collection.git" :rev "main")
+  :after hel
+  :config (hel-collection-init))
+#+end_src
+
+*** [[https://github.com/progfolio/elpaca][Elpaca]]
+
+#+begin_src emacs-lisp
+(elpaca '(hel-collection :host github :repo "anuvyklack/hel-collection"
+                         :files (:defaults "modes"))
+  (hel-collection-init))
+#+end_src
+
+*** [[https://github.com/radian-software/straight.el][Straight]]
+
+#+begin_src emacs-lisp
+(straight-use-package '(hel-collection :host github :repo "anuvyklack/hel-collection"
+                                       :files (:defaults "modes")))
+(hel-collection-init)
+#+end_src
+
+** Enable
+
+Enables every package hel-collection ships:
+
+#+begin_src emacs-lisp
+(hel-collection-init)
+#+end_src
+
+Or name the ones you want:
+
+#+begin_src emacs-lisp
+(hel-collection-init '(grep compile))
+#+end_src
+
+#+begin_quote
+[!IMPORTANT]
+Call it *early* in your init file. It only registers ~with-eval-after-load~
+forms, and Emacs runs those in registration order — so registering ours
+first lets your own win by last.
+#+end_quote
+
+** Customization
+*** Keys you want to remain untouched
+
+~hel-collection-key-denylist~ lists keys hel-collection must leave alone.
+A denied key is neither bound nor unbound: the package's own binding stays
+exactly as it was.
+
+#+begin_src emacs-lisp
+(setopt hel-collection-key-denylist '("SPC" "C-c"))
+#+end_src
+
+*** Running code after a package is set up
+
+~hel-collection-setup-hook~ runs once a feature has loaded and hel-collection has
+finished with it. It is the right place for your own bindings, because — unlike
+an ~after-load~ form — it fires again when a mode file is reloaded, so your keys
+survive.
+
+#+begin_src emacs-lisp
+(add-hook 'hel-collection-setup-hook
+          (lambda (feature keymaps &rest _)
+            (pcase feature
+              ('dired (hel-keymap-set dired-mode-map
+                        "T" #'my-dired-command)))))
+#+end_src
+
+Each function is called with ~(FEATURE KEYMAPS &rest _)~: the feature the form
+waited on, and the keymap symbols it touched. The ~&rest _~ is required.
+
+** Key conventions
+
+| Key | Means                       |
+|-----+-----------------------------|
+| =q=   | quit / bury                 |
+| =g r= | revert, refresh             |
+| =i=   | enter the editable sub-mode |
+| =RET= | act on the thing at point   |
+| =Z Z= | finish                      |
+| =Z Q= | abort an edit               |
+
+** Acknowledgments
+
+hel-collection is heavily inspired by:
+
+- [[https://github.com/emacs-evil/evil-collection][evil-collection]]
+- [[https://github.com/oantolin/setup.el][setup.el]] 
