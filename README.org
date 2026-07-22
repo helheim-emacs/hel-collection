@@ -75,9 +75,7 @@ exactly as it was.
 *** Running code after a package is set up
 
 ~hel-collection-setup-hook~ runs once a feature has loaded and hel-collection has
-finished with it. It is the right place for your own bindings, because — unlike
-an ~after-load~ form — it fires again when a mode file is reloaded, so your keys
-survive.
+finished with it.
 
 #+begin_src emacs-lisp
 (add-hook 'hel-collection-setup-hook
@@ -100,6 +98,7 @@ waited on, and the keymap symbols it touched. The ~&rest _~ is required.
 | =RET= | act on the thing at point   |
 | =Z Z= | finish                      |
 | =Z Q= | abort an edit               |
+| =,=   | local leader                |
 
 ** Acknowledgments
 
