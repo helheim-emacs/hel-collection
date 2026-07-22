@@ -38,13 +38,15 @@
       ", >"  'diff-unified->context
       ", <"  'diff-context->unified
       ;; "g f"  'next-error-follow-minor-mode
-      ))
+      )))
 
-  (:keymap diff-mode-read-only-map
-    (:bind
-      "y"    'diff-kill-ring-save
-      "u"    'diff-undo
-      ", d"  'diff-revert-and-kill-hunk)))
+(when (<= 31 emacs-major-version)
+  (hel-collection-setup diff-mode
+    (:keymap diff-mode-read-only-map ; Emacs 31
+      (:bind
+        "y"    'diff-kill-ring-save ; Emacs 31
+        "u"    'diff-undo
+        ", d"  'diff-revert-and-kill-hunk)))) ; Emacs 31
 
 (provide 'hel-collection-diff-mode)
 ;;; hel-collection-diff-mode.el ends here
