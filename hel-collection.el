@@ -4,8 +4,8 @@
 ;;
 ;; Author: Yuriy Artemyev <anuvyklack@gmail.com>
 ;; Maintainer: Yuriy Artemyev <anuvyklack@gmail.com>
-;; Version: 0.1.0
-;; Homepage: https://github.com/anuvyklack/hel-collection
+;; Version: 0.2.0
+;; Homepage: https://github.com/helheim-emacs/hel-collection
 ;; Package-Requires: ((emacs "29.1") (dash "2.19.1") (hel "0.12.0"))
 ;;
 ;; This file is not part of GNU Emacs.
