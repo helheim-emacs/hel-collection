@@ -137,19 +137,103 @@ are the same as for `hel-keymap-set'.
 
 ;;; The expander
 
+(defvar hel-collection--feature nil
+  "Feature of the `hel-collection-setup' form being expanded.
+Bound only during macro expansion.")
+
+(defvar hel-collection--keymaps nil
+  "Keymap symbols established by the enclosing `:keymap' form.
+Bound only during macro expansion.")
+
+(defvar hel-collection--snapshotted nil
+  "Keymaps that already got a `hel-collection--snapshot' call in this form.
+Bound only during macro expansion.")
+
+(defvar hel-collection--touched nil
+  "Every keymap the `hel-collection-setup' form being expanded names.
+Reported to `hel-collection-setup-hook' and recorded for reloading.
+Bound only during macro expansion.")
+
+(defvar hel-collection-macros nil
+  "Alist of (KEYWORD . EXPANDER) used as a `macroexpand-all' environment.")
+
+(defun hel-collection--expand (body)
+  "Expand hel-collection's keywords in BODY, a list of forms."
+  (macroexpand-all (macroexp-progn body)
+                   (append hel-collection-macros
+                           macroexpand-all-environment)))
+
+(defun hel-collection--binding-maps (keyword)
+  "Return the keymaps KEYWORD binds into, or signal if there are none."
+  (or hel-collection--keymaps
+      (error "hel-collection: `%s' outside a `:keymap' form" keyword)))
+
+(setf (alist-get :after-load hel-collection-macros)
+      (lambda (&rest body)
+        ;; Returned unexpanded on purpose: `macroexpand-all' keeps walking
+        ;; its own output, so the body is expanded for us.  Only a keyword
+        ;; that establishes context has to expand its body itself.
+        `(with-eval-after-load ',hel-collection--feature ,@body)))
+
+(setf (alist-get :keymap hel-collection-macros)
+      (lambda (keymap &rest body)
+        (let ((maps (ensure-list keymap)))
+          (unless (-all-p #'symbolp maps)
+            (error "hel-collection: `:keymap' takes a symbol or a list of them, got %S" keymap))
+          (let ((fresh (-difference maps hel-collection--snapshotted)))
+            (cl-callf append hel-collection--touched maps)
+            (cl-callf append hel-collection--snapshotted fresh)
+            (macroexp-progn
+             (append (-map (lambda (map) `(hel-collection--snapshot ',map))
+                           fresh)
+                     (list (let ((hel-collection--keymaps maps))
+                             (hel-collection--expand body)))))))))
+
+(setf (alist-get :bind hel-collection-macros)
+      (lambda (&rest args)
+        (-let [((&plist :state) . bindings) (hel-split-keyword-args args)]
+          (unless (cl-evenp (length bindings))
+            (error "hel-collection: odd number of KEY/DEFINITION arguments in `:bind'"))
+          (macroexp-progn
+           (-map (lambda (map)
+                   `(hel-collection--keymap-set ',map
+                      ,@(if state (list :state `',(hel-unquote state)))
+                      ,@bindings))
+                 (hel-collection--binding-maps :bind))))))
+
+(setf (alist-get :unbind hel-collection-macros)
+      (lambda (&rest args)
+        (-let [((&plist :state) . keys) (hel-split-keyword-args args)]
+          (macroexp-progn
+           (-map (lambda (map)
+                   `(hel-collection--keymap-set ',map
+                      ,@(if state (list :state `',(hel-unquote state)))
+                      ,@(-mapcat (lambda (key) (list key nil)) keys)))
+                 (hel-collection--binding-maps :unbind))))))
+
+(setf (alist-get :initial-state hel-collection-macros)
+      (lambda (mode state)
+        `(hel-set-initial-state ',(hel-unquote mode) ',(hel-unquote state))))
+
 ;;;###autoload
 (defmacro hel-collection-setup (feature &rest body)
   "Configure FEATURE.
 
-Each form in BODY is dispatched on its car:
+A form in BODY whose car is one of the keywords below is expanded in
+place, at any depth: the body is walked by `macroexpand-all', so a
+keyword nested inside a `when', a `let' or a `with-eval-after-load'
+expands just as one written at the top of BODY does.  Data behind
+`quote' is left alone.  Any other form is plain imperative Lisp and is
+passed through untouched.
+
+The keywords:
 
   (:after-load BODY...)
       Evaluate BODY once FEATURE has been loaded.
 
-  (:keymap KEYMAP BINDING...)
+  (:keymap KEYMAP BODY...)
       KEYMAP is an unquoted keymap symbol, or an unquoted list of them.
-      Each nested `:bind' or `:unbind' form binds into every KEYMAP named.
-      Only those two forms are allowed here; anything else is an error.
+      Each `:bind' or `:unbind' in BODY binds into every KEYMAP named.
 
   (:bind [:state STATE] KEY DEFINITION...)
       Bind KEYs to DEFINITIONs in the enclosing `:keymap'.
@@ -161,76 +245,21 @@ Each form in BODY is dispatched on its car:
   (:initial-state MODE STATE)
       Enter MODE in the Hel STATE, via `hel-set-initial-state'.
 
-Any other form in BODY, or in an `:after-load' body, is plain imperative
-Lisp and is passed through unchanged.  Inside `:keymap' it is an error —
-see `hel-collection--expand-binding-form'.
-
 \(fn FEATURE &rest BODY)"
   (declare (indent 1)
            (debug (symbolp &rest sexp)))
-  (let (snapshotted   ; keymaps for which we have already created snapshot
-        all-keymaps)  ; every keymap touched, for reporting to the hook
-    (cl-labels
-        ((expand (body)
-           (-map #'expand-form body))
-         (expand-form (form)
-           (pcase form
-             (`(:after-load . ,body)
-              `(with-eval-after-load ',feature
-                 ,@(expand body)))
-             (`(:keymap ,keymap . ,body)
-              (let ((maps (ensure-list keymap)))
-                (unless (-all-p #'symbolp maps)
-                  (error "hel-collection: `:keymap' takes a symbol or a list of them, got %S" keymap))
-                (cl-callf append all-keymaps maps)
-                (macroexp-progn
-                 (append
-                  ;; snapshots
-                  (let ((not-snapshotted (-difference maps snapshotted)))
-                    (cl-callf append snapshotted not-snapshotted)
-                    (->> not-snapshotted
-                         (-map (lambda (map) `(hel-collection--snapshot ',map)))))
-                  ;; bindings
-                  (->> body
-                       (-map (lambda (form)
-                               (hel-collection--expand-binding-form maps form))))))))
-             (`(:initial-state ,mode ,state)
-              `(hel-set-initial-state ',(hel-unquote mode) ',(hel-unquote state)))
-             ;; All other forms passed through untouched.
-             (_ form))))
-      ;; `let*' sequencing is load-bearing: `all-keymaps' is filled while the
-      ;; body is expanded, so it can only be read afterwards.
-      (let* ((expansion (expand body))
-             (maps (-uniq all-keymaps)))
-        `(progn
-           (hel-collection--record-keymaps ',maps)
-           ,@expansion
-           (with-eval-after-load ',feature
-             (run-hook-with-args 'hel-collection-setup-hook
-                                 ',feature ',maps)))))))
-
-(defun hel-collection--expand-binding-form (maps form)
-  "Expand a `:bind' or `:unbind' FORM for every keymap in MAPS."
-  (pcase form
-    (`(:bind . ,body)
-     (-let [((&plist :state) . bindings) (hel-split-keyword-args body)]
-       (unless (cl-evenp (length bindings))
-         (error "hel-collection: odd number of KEY/DEFINITION arguments in `:bind'"))
-       (macroexp-progn
-        (-map (lambda (map)
-                `(hel-collection--keymap-set ',map
-                   ,@(if state (list :state `',(hel-unquote state)))
-                   ,@bindings))
-              maps))))
-    (`(:unbind . ,body)
-     (-let [((&plist :state) . keys) (hel-split-keyword-args body)]
-       (macroexp-progn
-        (-map (lambda (map)
-                `(hel-collection--keymap-set ',map
-                   ,@(if state (list :state `',(hel-unquote state)))
-                   ,@(-mapcat (lambda (key) (list key nil)) keys)))
-              maps))))
-    (_ (error "hel-collection: `:keymap' takes only `:bind' and `:unbind' forms, got %S" form))))
+  (let* ((hel-collection--feature feature)
+         (hel-collection--keymaps nil)
+         (hel-collection--snapshotted nil)
+         (hel-collection--touched nil)
+         (expansion (hel-collection--expand body))
+         (maps (-uniq hel-collection--touched)))
+    `(progn
+       (hel-collection--record-keymaps ',maps)
+       ,@(macroexp-unprogn expansion)
+       (with-eval-after-load ',feature
+         (run-hook-with-args 'hel-collection-setup-hook
+                             ',feature ',maps)))))
 
 (put :after-load    'lisp-indent-function 0)
 (put :keymap        'lisp-indent-function 1)
