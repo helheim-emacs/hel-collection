@@ -139,14 +139,17 @@ are the same as for `hel-keymap-set'.
 
 ;;;###autoload
 (defmacro hel-collection-setup (feature &rest body)
-  "Apply BODY after FEATURE has been loaded.
+  "Configure FEATURE.
 
-The BODY is wrapped in `with-eval-after-load' with FEATURE and
-each form is dispatched on its car:
+Each form in BODY is dispatched on its car:
+
+  (:after-load BODY...)
+      Evaluate BODY once FEATURE has been loaded.
 
   (:keymap KEYMAP BINDING...)
       KEYMAP is an unquoted keymap symbol, or an unquoted list of them.
-      Each nested BINDING form binds into every KEYMAP named.
+      Each nested `:bind' or `:unbind' form binds into every KEYMAP named.
+      Only those two forms are allowed here; anything else is an error.
 
   (:bind [:state STATE] KEY DEFINITION...)
       Bind KEYs to DEFINITIONs in the enclosing `:keymap'.
@@ -158,48 +161,59 @@ each form is dispatched on its car:
   (:initial-state MODE STATE)
       Enter MODE in the Hel STATE, via `hel-set-initial-state'.
 
-Any other form is passed through unchanged and evaluated once FEATURE
-has loaded.
+Any other form in BODY, or in an `:after-load' body, is plain imperative
+Lisp and is passed through unchanged.  Inside `:keymap' it is an error —
+see `hel-collection--expand-binding-form'.
 
 \(fn FEATURE &rest BODY)"
   (declare (indent 1)
            (debug (symbolp &rest sexp)))
-  (let ((snapshotted '())   ; maps we have emitted snapshot/restore for
-        (all-maps '())      ; every map touched, reported to the hook
-        (forms '()))
-    (dolist (form body)
-      (pcase (car-safe form)
-        (:keymap
-         (-let* (((_ keymap . bindings) form)
-                 (maps (ensure-list keymap)))
-           (unless (-all-p #'symbolp maps)
-             (error "hel-collection: `:keymap' takes a symbol or a list of them, got %S"
-                    keymap))
-           (dolist (map maps)
-             (unless (memq map all-maps) (push map all-maps))
-             (unless (memq map snapshotted)
-               (push map snapshotted)
-               (push `(hel-collection--snapshot ',map) forms)))
-           (dolist (binding bindings)
-             (push (hel-collection--expand-binding binding maps) forms))))
-        (:initial-state
-         (-let [(_ mode state) form]
-           (push `(hel-set-initial-state ',(hel-unquote mode)
-                                         ',(hel-unquote state))
-                 forms)))
-        ;; Imperative escape hatch — passed through untouched.
-        (_ (push form forms))))
-    `(with-eval-after-load ',feature
-       ,@(nreverse forms)
-       (run-hook-with-args 'hel-collection-setup-hook ',feature ',(nreverse all-maps)))))
+  (let (snapshotted   ; keymaps for which we have already created snapshot
+        all-keymaps)  ; every keymap touched, for reporting to the hook
+    (cl-labels
+        ((expand (body)
+           (-map #'expand-form body))
+         (expand-form (form)
+           (pcase form
+             (`(:after-load . ,body)
+              `(with-eval-after-load ',feature
+                 ,@(expand body)))
+             (`(:keymap ,keymap . ,body)
+              (let ((maps (ensure-list keymap)))
+                (unless (-all-p #'symbolp maps)
+                  (error "hel-collection: `:keymap' takes a symbol or a list of them, got %S" keymap))
+                (cl-callf append all-keymaps maps)
+                (macroexp-progn
+                 (append
+                  ;; snapshots
+                  (let ((not-snapshotted (-difference maps snapshotted)))
+                    (cl-callf append snapshotted not-snapshotted)
+                    (->> not-snapshotted
+                         (-map (lambda (map) `(hel-collection--snapshot ',map)))))
+                  ;; bindings
+                  (->> body
+                       (-map (lambda (form)
+                               (hel-collection--expand-binding-form maps form))))))))
+             (`(:initial-state ,mode ,state)
+              `(hel-set-initial-state ',(hel-unquote mode) ',(hel-unquote state)))
+             ;; All other forms passed through untouched.
+             (_ form))))
+      ;; `let*' sequencing is load-bearing: `all-keymaps' is filled while the
+      ;; body is expanded, so it can only be read afterwards.
+      (let* ((expansion (expand body))
+             (maps (-uniq all-keymaps)))
+        `(progn
+           (hel-collection--record-keymaps ',maps)
+           ,@expansion
+           (with-eval-after-load ',feature
+             (run-hook-with-args 'hel-collection-setup-hook
+                                 ',feature ',maps)))))))
 
-(defun hel-collection--expand-binding (form maps)
-  "Expand a `:bind' or `:unbind' FORM into `hel-collection--keymap-set' calls.
-One call is emitted per keymap symbol in MAPS.  Any other FORM is returned
-unchanged, so it rides along as imperative Lisp inside `:keymap'."
-  (pcase (car-safe form)
-    (:bind
-     (-let [((&plist :state) . bindings) (hel-split-keyword-args (cdr form))]
+(defun hel-collection--expand-binding-form (maps form)
+  "Expand a `:bind' or `:unbind' FORM for every keymap in MAPS."
+  (pcase form
+    (`(:bind . ,body)
+     (-let [((&plist :state) . bindings) (hel-split-keyword-args body)]
        (unless (cl-evenp (length bindings))
          (error "hel-collection: odd number of KEY/DEFINITION arguments in `:bind'"))
        (macroexp-progn
@@ -208,16 +222,17 @@ unchanged, so it rides along as imperative Lisp inside `:keymap'."
                    ,@(if state (list :state `',(hel-unquote state)))
                    ,@bindings))
               maps))))
-    (:unbind
-     (-let [((&plist :state) . keys) (hel-split-keyword-args (cdr form))]
+    (`(:unbind . ,body)
+     (-let [((&plist :state) . keys) (hel-split-keyword-args body)]
        (macroexp-progn
         (-map (lambda (map)
                 `(hel-collection--keymap-set ',map
                    ,@(if state (list :state `',(hel-unquote state)))
                    ,@(-mapcat (lambda (key) (list key nil)) keys)))
               maps))))
-    (_ form)))
+    (_ (error "hel-collection: `:keymap' takes only `:bind' and `:unbind' forms, got %S" form))))
 
+(put :after-load    'lisp-indent-function 0)
 (put :keymap        'lisp-indent-function 1)
 (put :bind          'lisp-indent-function 'defun)
 (put :unbind        'lisp-indent-function 'defun)
@@ -260,83 +275,26 @@ This only registers `with-eval-after-load' forms; nothing is bound yet."
 MODES is a mode symbol or a list of them."
   (-each (ensure-list modes) #'hel-collection--load-mode-file))
 
-;;; The source walker
-
-(defun hel-collection-walk-mode (mode)
-  "Parse MODE's mode file. See `hel-collection-walk-file'."
-  (hel-collection-walk-file (hel-collection--mode-file mode)))
-
-(defun hel-collection-walk-file (file)
-  "Parse FILE, returning one plist per `hel-collection-setup' form.
-Each plist is (:feature FEATURE :keymaps BLOCKS :initial-states STATES
-:imperative FORMS), where BLOCKS holds the result of
-`hel-collection--walk-keymap-form' — a (:maps SYMS :bindings BINDINGS)
-plist — for each `:keymap' block, INITIAL-STATES is a list of
-\(MODE . STATE), and IMPERATIVE is the plain Lisp forms — everything the
-grammar does not recognise.
-
-Note the two levels: the outer `:keymaps' is the list of blocks, the
-inner `:maps' the symbols one block binds into."
-  (->> (hel-collection--read-file file)
-       (-filter (lambda (form)
-                  (eq 'hel-collection-setup (car-safe form))))
-       (-map #'hel-collection--walk-setup-form)))
-
-(defun hel-collection--read-file (file)
-  "Read FILE and return its top-level forms."
-  (with-temp-buffer
-    (insert-file-contents file)
-    (goto-char (point-min))
-    (cl-loop for form = (condition-case nil
-                            (read (current-buffer))
-                          (end-of-file nil))
-             while form collect form)))
-
-(defun hel-collection--walk-keymap-form (form)
-  "Walk a `:keymap' FORM.  Return a plist (:maps SYMS :bindings BINDINGS).
-MAPS is a list even when the source named a single map, and the bindings
-are shared by all of them — the grouping the author wrote is preserved
-rather than fanned out, so a README can render one table for the group.
-A consumer that wants per-map data takes the cross product itself.
-
-Each binding is a plist (:key KEY :definition DEF :state STATE)."
-  (-let [(_ keymaps . body) form]
-    (list
-     :maps (ensure-list keymaps)
-     :bindings (-mapcat
-                (-lambda ((keyword . args))
-                  (-let* (((kwargs . args) (hel-split-keyword-args args))
-                          (state (-> (plist-get kwargs :state)
-                                     (hel-unquote))))
-                    (pcase keyword
-                      (:bind (-map (-lambda ((key definition))
-                                     (list :key key :definition definition :state state))
-                                   (-partition 2 args)))
-                      (:unbind (-map (lambda (key)
-                                       (list :key key :definition nil :state state))
-                                     args)))))
-                body))))
-
-(defun hel-collection--walk-setup-form (form)
-  "Walk a `hel-collection-setup' FORM.  See `hel-collection-walk-file'."
-  (-let [(_ feature . body) form]
-    (let (keymaps initial-states imperative)
-      (dolist (subform body)
-        (pcase (car-safe subform)
-          (:keymap (push (hel-collection--walk-keymap-form subform)
-                         keymaps))
-          (:initial-state
-            (-let [(_ mode state) subform]
-              (push (cons (hel-unquote mode)
-                          (hel-unquote state))
-                    initial-states)))
-          (_ (push subform imperative))))
-      (list :feature feature
-            :keymaps (nreverse keymaps)
-            :initial-states (nreverse initial-states)
-            :imperative (nreverse imperative)))))
-
 ;;; Development reload
+
+(defvar hel-collection--file-keymaps (make-hash-table :test 'equal)
+  "FILE -> the keymaps the `hel-collection-setup' forms in FILE name.
+Filled at load time by `hel-collection--record-keymaps', which every
+expansion calls, and read by `hel-collection-reload-file' to know what to
+restore.")
+
+(defun hel-collection--record-keymaps (maps)
+  "Record that the file currently being loaded names MAPS.
+Every `hel-collection-setup' expansion opens with a call to this, which
+runs while `load-file-name' still names the mode file.  The key is the
+`.el' truename, so loading the source and loading the byte-compiled file
+land on the same entry."
+  (when-let* ((file (or load-file-name buffer-file-name))
+              (key (file-truename
+                    (concat (file-name-sans-extension file) ".el"))))
+    (puthash key
+             (-union (gethash key hel-collection--file-keymaps) maps)
+             hel-collection--file-keymaps)))
 
 ;;;###autoload
 (defun hel-collection-reload-file (&optional file)
@@ -352,10 +310,7 @@ Emacs after editing keybindings."
   (interactive (list buffer-file-name))
   (let* ((file (or file buffer-file-name
                    (error "hel-collection: no file to reload")))
-         (maps (->> (hel-collection-walk-file file)
-                    (-mapcat (lambda (form) (plist-get form :keymaps)))
-                    (-mapcat (lambda (block) (plist-get block :maps)))
-                    (-distinct))))
+         (maps (gethash (file-truename file) hel-collection--file-keymaps)))
     (-each maps #'hel-collection--restore)
     (load-file file)))
 
