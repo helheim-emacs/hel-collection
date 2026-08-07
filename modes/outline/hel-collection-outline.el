@@ -5,57 +5,58 @@
 (require 'hel-collection)
 
 (hel-collection-setup outline
-  (:keymap outline-mode-prefix-map
-    (:unbind "/"))
+  (:after-load
+    (:keymap outline-mode-prefix-map
+      (:unbind "/"))
 
-  (:keymap (outline-mode-map
-            outline-minor-mode-map)
-    (:bind :state normal
-      "m h"     'hel-collection-outline-mark-subtree ; "h" is for heading
-      "m i h"   'hel-collection-outline-mark-subtree
-      "m o"     'hel-collection-outline-mark-subtree ; "o" is for outline
-      "m i o"   'hel-collection-outline-mark-subtree)
-    (:bind :state (normal emacs)
-      "z <tab>"     'outline-cycle
-      "z <backtab>" 'outline-cycle-buffer
-      "z <return>"  'outline-insert-heading
-      "z j"     'outline-next-visible-heading
-      "z k"     'outline-previous-visible-heading
-      "z C-j"   'outline-forward-same-level
-      "z C-k"   'outline-backward-same-level
-      "z u"     'hel-collection-outline-up-heading
-      "z o"     'hel-collection-outline-open
-      "z c"     'outline-hide-subtree
-      "z r"     'outline-show-all
-      "z m"     'outline-hide-sublevels
-      "z 2"     'hel-collection-outline-show-2-sublevels
-      "z 3"     'hel-collection-outline-show-3-sublevels
-      "z p"     'hel-collection-outline-hide-other ; "p" for path
-      "z O"     'outline-show-branches
-      "z <"     'outline-promote
-      "z >"     'outline-demote
-      "z M-h"   'outline-promote
-      "z M-l"   'outline-demote
-      "z M-j"   'outline-move-subtree-down
-      "z M-k"   'outline-move-subtree-up
-      "z / s"   'outline-show-by-heading-regexp
-      "z / h"   'outline-hide-by-heading-regexp))
+    (:keymap (outline-mode-map
+              outline-minor-mode-map)
+      (:bind :state normal
+        "m h"     'hel-collection-outline-mark-subtree ; "h" is for heading
+        "m i h"   'hel-collection-outline-mark-subtree
+        "m o"     'hel-collection-outline-mark-subtree ; "o" is for outline
+        "m i o"   'hel-collection-outline-mark-subtree)
+      (:bind :state (normal emacs)
+        "z <tab>"     'outline-cycle
+        "z <backtab>" 'outline-cycle-buffer
+        "z <return>"  'outline-insert-heading
+        "z j"     'outline-next-visible-heading
+        "z k"     'outline-previous-visible-heading
+        "z C-j"   'outline-forward-same-level
+        "z C-k"   'outline-backward-same-level
+        "z u"     'hel-collection-outline-up-heading
+        "z o"     'hel-collection-outline-open
+        "z c"     'outline-hide-subtree
+        "z r"     'outline-show-all
+        "z m"     'outline-hide-sublevels
+        "z 2"     'hel-collection-outline-show-2-sublevels
+        "z 3"     'hel-collection-outline-show-3-sublevels
+        "z p"     'hel-collection-outline-hide-other ; "p" for path
+        "z O"     'outline-show-branches
+        "z <"     'outline-promote
+        "z >"     'outline-demote
+        "z M-h"   'outline-promote
+        "z M-l"   'outline-demote
+        "z M-j"   'outline-move-subtree-down
+        "z M-k"   'outline-move-subtree-up
+        "z / s"   'outline-show-by-heading-regexp
+        "z / h"   'outline-hide-by-heading-regexp))
 
-  (:keymap outline-navigation-repeat-map
-    (:unbind "C-b" "b" "C-f" "f" "C-n" "n" "C-p" "p")
-    (:bind
-      "j"   'outline-next-visible-heading
-      "k"   'outline-previous-visible-heading
-      "C-j" 'outline-forward-same-level
-      "C-k" 'outline-backward-same-level))
+    (:keymap outline-navigation-repeat-map
+      (:unbind "C-b" "b" "C-f" "f" "C-n" "n" "C-p" "p")
+      (:bind
+        "j"   'outline-next-visible-heading
+        "k"   'outline-previous-visible-heading
+        "C-j" 'outline-forward-same-level
+        "C-k" 'outline-backward-same-level))
 
-  (:keymap outline-editing-repeat-map
-    (:unbind "C-v" "v" "C-^" "^" "C->" "C-<")
-    (:bind
-      "M-h" 'outline-promote
-      "M-l" 'outline-demote
-      "M-j" 'outline-move-subtree-down
-      "M-k" 'outline-move-subtree-up)))
+    (:keymap outline-editing-repeat-map
+      (:unbind "C-v" "v" "C-^" "^" "C->" "C-<")
+      (:bind
+        "M-h" 'outline-promote
+        "M-l" 'outline-demote
+        "M-j" 'outline-move-subtree-down
+        "M-k" 'outline-move-subtree-up))))
 
 ;;; Commands
 

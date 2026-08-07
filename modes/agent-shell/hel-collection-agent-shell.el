@@ -47,61 +47,61 @@
 ;;; Keybindings
 
 (hel-collection-setup agent-shell
-  (:keymap agent-shell-mode-map
-    (:bind
-      "C-r" 'comint-history-isearch-backward-regexp)
-    (:bind :state normal
-      "] ]" 'hel-agent-shell-next-item
-      "[ [" 'hel-agent-shell-previous-item
-      "C-j" 'hel-agent-shell-next-item
-      "C-k" 'hel-agent-shell-previous-item
-      "z j" 'hel-agent-shell-next-item
-      "z k" 'hel-agent-shell-previous-item
-      "z u" 'hel-agent-shell-item-beginning
-      "p"   'hel-agent-shell-paste-dwim
-      ","    hel-agent-shell-local-leader-map)
-    (:bind :state insert
-      "C-w" 'hel-delete-backward-word))
+  (:after-load
+    (:keymap agent-shell-mode-map
+      (:bind
+        "C-r" 'comint-history-isearch-backward-regexp)
+      (:bind :state normal
+        "] ]" 'hel-agent-shell-next-item
+        "[ [" 'hel-agent-shell-previous-item
+        "C-j" 'hel-agent-shell-next-item
+        "C-k" 'hel-agent-shell-previous-item
+        "z j" 'hel-agent-shell-next-item
+        "z k" 'hel-agent-shell-previous-item
+        "z u" 'hel-agent-shell-item-beginning
+        "p"   'hel-agent-shell-paste-dwim
+        ","    hel-agent-shell-local-leader-map)
+      (:bind :state insert
+        "C-w" 'hel-delete-backward-word))
 
-  (:initial-state agent-shell-viewport-view-mode emacs)
+    (:initial-state 'agent-shell-viewport-view-mode 'emacs)
+    (:keymap agent-shell-viewport-view-mode-map
+      (:bind :state emacs
+        "i"   'hel-normal-state
+        "h"   'left-char
+        "j"   'next-line
+        "k"   'previous-line
+        "l"   'right-char
+        "g g" 'beginning-of-buffer
+        "G"   'end-of-buffer
+        "] ]" 'agent-shell-viewport-next-page
+        "[ [" 'agent-shell-viewport-previous-page
+        "C-j" 'agent-shell-viewport-next-item
+        "C-k" 'agent-shell-viewport-previous-item
+        "z j" 'agent-shell-viewport-next-item
+        "z k" 'agent-shell-viewport-previous-item
+        ","    hel-agent-shell-viewport-view-local-leader-map)
+      (:bind :state normal
+        "<escape>" 'hel-emacs-state
+        "q"        'bury-buffer))
 
-  (:keymap agent-shell-viewport-view-mode-map
-    (:bind :state emacs
-      "i"   'hel-normal-state
-      "h"   'left-char
-      "j"   'next-line
-      "k"   'previous-line
-      "l"   'right-char
-      "g g" 'beginning-of-buffer
-      "G"   'end-of-buffer
-      "] ]" 'agent-shell-viewport-next-page
-      "[ [" 'agent-shell-viewport-previous-page
-      "C-j" 'agent-shell-viewport-next-item
-      "C-k" 'agent-shell-viewport-previous-item
-      "z j" 'agent-shell-viewport-next-item
-      "z k" 'agent-shell-viewport-previous-item
-      ","    hel-agent-shell-viewport-view-local-leader-map)
-    (:bind :state normal
-      "<escape>" 'hel-emacs-state
-      "q"        'bury-buffer))
+    (:keymap agent-shell-viewport-edit-mode-map
+      (:bind :state normal
+        "[ [" 'agent-shell-viewport-compose-peek-last
+        "C-k" 'agent-shell-viewport-previous-history
+        "C-j" 'agent-shell-viewport-next-history
+        "C-r" 'agent-shell-viewport-search-history
+        "p"   'hel-agent-shell-paste-dwim
+        ;;
+        "Z Z" '("send prompt" . agent-shell-viewport-compose-send)
+        "Z Q" '("cancel" . agent-shell-viewport-compose-cancel)
+        ","    hel-agent-shell-viewport-edit-local-leader-map))
 
-  (:keymap agent-shell-viewport-edit-mode-map
-    (:bind :state normal
-      "[ [" 'agent-shell-viewport-compose-peek-last
-      "C-k" 'agent-shell-viewport-previous-history
-      "C-j" 'agent-shell-viewport-next-history
-      "C-r" 'agent-shell-viewport-search-history
-      "p"   'hel-agent-shell-paste-dwim
-      ;;
-      "Z Z" '("send prompt" . agent-shell-viewport-compose-send)
-      "Z Q" '("cancel" . agent-shell-viewport-compose-cancel)
-      ","    hel-agent-shell-viewport-edit-local-leader-map))
-
-  (:initial-state agent-shell-diff-mode emacs)
-  (:keymap agent-shell-diff-mode-map
-    (:bind
-      "C-j" 'diff-hunk-next
-      "C-k" 'diff-hunk-prev)))
+    (:initial-state 'agent-shell-diff-mode 'emacs)
+    (:keymap agent-shell-diff-mode-map
+      (:bind
+        "C-j" 'diff-hunk-next
+        "C-k" 'diff-hunk-prev))))
 
 (defvar-keymap hel-agent-shell-local-leader-map
   :doc "<local-leader> in agent-shell mode."

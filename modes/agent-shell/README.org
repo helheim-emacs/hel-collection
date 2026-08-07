@@ -1,13 +1,13 @@
 * agent-shell
 
-[[https://github.com/anuvyklack/hel][Hel]] extension that integrates it with [[https://github.com/xenodium/agent-shell][Agent-shell]] — an Emacs shell based on
+[[https://github.com/helheim-emacs/hel][Hel]] extension that integrates it with [[https://github.com/xenodium/agent-shell][Agent-shell]] — an Emacs shell based on
 ~comint-mode~ for interacting with LLM agents via ACP ([[https://agentclientprotocol.com][Agent Client Protocol]]).
 
 ** Install
 
 #+begin_src emacs-lisp
 (use-package hel-agent-shell
-  :vc (:url "https://github.com/anuvyklack/hel-agent-shell.git" :rev "main")
+  :vc (:url "https://github.com/helheim-emacs/hel-agent-shell.git" :rev "main")
   :after agent-shell)
 #+end_src
 

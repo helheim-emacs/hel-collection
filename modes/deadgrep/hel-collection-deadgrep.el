@@ -18,45 +18,46 @@
 ;;; Keybindings in Deadgrep buffer
 
 (hel-collection-setup deadgrep
-  (:keymap deadgrep-mode-map
-    (:unbind "g")
-    (:bind
-      "i"   'deadgrep-edit-mode
+  (:after-load
+    (:keymap deadgrep-mode-map
+      (:unbind "g")
+      (:bind
+        "i"   'deadgrep-edit-mode
 
-      "a"   'deadgrep-incremental ; "a" for amend
-      "g r" 'deadgrep-restart     ; also "C-w r"
+        "a"   'deadgrep-incremental ; "a" for amend
+        "g r" 'deadgrep-restart     ; also "C-w r"
 
-      "RET" 'deadgrep-visit-result-other-window
+        "RET" 'deadgrep-visit-result-other-window
 
-      "o"   'hel-collection-deadgrep-show-result-other-window
-      "C-o" 'hel-collection-deadgrep-show-result-other-window
+        "o"   'hel-collection-deadgrep-show-result-other-window
+        "C-o" 'hel-collection-deadgrep-show-result-other-window
 
-      "n"   'deadgrep-forward-match
-      "N"   'deadgrep-backward-match
+        "n"   'deadgrep-forward-match
+        "N"   'deadgrep-backward-match
 
-      "C-j" 'hel-collection-deadgrep-forward-match-show-other-window
-      "C-k" 'hel-collection-deadgrep-backward-match-show-other-window
+        "C-j" 'hel-collection-deadgrep-forward-match-show-other-window
+        "C-k" 'hel-collection-deadgrep-backward-match-show-other-window
 
-      "}"   'deadgrep-forward-filename
-      "{"   'deadgrep-backward-filename
-      "] p" 'deadgrep-forward-filename
-      "[ p" 'deadgrep-backward-filename
+        "}"   'deadgrep-forward-filename
+        "{"   'deadgrep-backward-filename
+        "] p" 'deadgrep-forward-filename
+        "[ p" 'deadgrep-backward-filename
 
-      "z j" 'deadgrep-forward-filename
-      "z k" 'deadgrep-backward-filename
-      "z u" 'deadgrep-parent-directory))
+        "z j" 'deadgrep-forward-filename
+        "z k" 'deadgrep-backward-filename
+        "z u" 'deadgrep-parent-directory))
 
-  (:keymap deadgrep-edit-mode-map
-    (:bind :state normal
-      "<escape>" 'deadgrep-mode
-      "z x" 'deadgrep-mode
-      "Z Z" 'deadgrep-mode
-      "RET" 'deadgrep-visit-result-other-window
+    (:keymap deadgrep-edit-mode-map
+      (:bind :state normal
+        "<escape>" 'deadgrep-mode
+        "z x" 'deadgrep-mode
+        "Z Z" 'deadgrep-mode
+        "RET" 'deadgrep-visit-result-other-window
 
-      ;; Commands bound to these keys have no sense for Deadgrep.
-      "o"   'undefined
-      "O"   'undefined
-      "J"   'undefined)))
+        ;; Commands bound to these keys have no sense for Deadgrep.
+        "o"   'undefined
+        "O"   'undefined
+        "J"   'undefined))))
 
 ;;; Hooks and Advices
 
