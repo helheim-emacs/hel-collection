@@ -1,10 +1,10 @@
-* [[https://github.com/anuvyklack/hel][Hel]] Collection
+* [[https://github.com/helheim-emacs/hel][Hel]] Collection
 
 #+html: <a href="https://www.gnu.org/software/emacs/"><img alt="GNU Emacs" src="https://img.shields.io/badge/GNU%20Emacs-29.1%2B-7F5AB6?logo=gnuemacs&logoColor=white"></a>
 #+html: <a href="LICENSE"><img alt="License: GPLv3" src="https://img.shields.io/badge/license-GPLv3-blue"></a>
 
 The collection of keybindings for third-party and built-in Emacs packages to
-use them with [[https://github.com/anuvyklack/hel][Hel]].
+use them with [[https://github.com/helheim-emacs/hel][Hel]].
 
 Bindings are written directly into the package's own keymap — not into Hel
 Emacs state keymap or a per-package minor mode. This is an intentional
@@ -13,13 +13,13 @@ lets you rebind them using the standard Emacs mechanisms.
 
 ** Installation
 
-hel-collection is not on MELPA yet. Install it from GitHub, alongside [[https://github.com/anuvyklack/hel][Hel]].
+hel-collection is not on MELPA yet. Install it from GitHub, alongside [[https://github.com/helheim-emacs/hel][Hel]].
 
 *** Emacs built-in package manager
 
 #+begin_src emacs-lisp
 (use-package hel-collection
-  :vc (:url "https://github.com/anuvyklack/hel-collection.git" :rev "main")
+  :vc (:url "https://github.com/helheim-emacs/hel-collection.git" :rev "main")
   :after hel
   :config (hel-collection-init))
 #+end_src
@@ -27,7 +27,7 @@ hel-collection is not on MELPA yet. Install it from GitHub, alongside [[https://
 *** [[https://github.com/progfolio/elpaca][Elpaca]]
 
 #+begin_src emacs-lisp
-(elpaca '(hel-collection :host github :repo "anuvyklack/hel-collection"
+(elpaca '(hel-collection :host github :repo "helheim-emacs/hel-collection"
                          :files (:defaults "modes"))
   (hel-collection-init))
 #+end_src
@@ -35,7 +35,7 @@ hel-collection is not on MELPA yet. Install it from GitHub, alongside [[https://
 *** [[https://github.com/radian-software/straight.el][Straight]]
 
 #+begin_src emacs-lisp
-(straight-use-package '(hel-collection :host github :repo "anuvyklack/hel-collection"
+(straight-use-package '(hel-collection :host github :repo "helheim-emacs/hel-collection"
                                        :files (:defaults "modes")))
 (hel-collection-init)
 #+end_src
