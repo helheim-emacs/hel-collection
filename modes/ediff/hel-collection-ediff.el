@@ -59,7 +59,6 @@ keymap of the session being set up."
     (hel-keymap-set ediff-mode-map :state 'emacs
       "l"  'ediff-copy-A-to-B
       "h"  'ediff-copy-B-to-A))
-  ;; (hel-update-active-keymaps)
   (hel-emacs-state))
 
 ;;; Help message

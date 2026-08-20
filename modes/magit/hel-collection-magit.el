@@ -339,7 +339,6 @@ with the key bindings used in Magit."
 
 (hel-collection-setup magit-files
   (:after-load
-    (add-hook 'magit-blob-mode-hook 'hel-update-active-keymaps)
     (:keymap magit-blob-mode-map
       ;; Unset all keys in base keymap to be able to use them in Insert state
       ;; in Ediff in ~{index}~ buffer.
