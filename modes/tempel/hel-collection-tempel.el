@@ -16,11 +16,10 @@
         "<escape>"   'tempel-abort
         "RET"        'tempel-done)
       (:bind :state (normal insert)
-        "C-k"        'tempel-previous
-        "C-j"        'tempel-next)
-      (:bind :state insert
-        "M-RET"      'tempel-done
-        "C-<return>" 'tempel-done))))
+        "<tab>"      'tempel-next
+        "S-<tab>"    'tempel-previous
+        "C-<return>" 'tempel-done
+        "M-<return>" 'tempel-done))))
 
 ;;; .
 (provide 'hel-collection-tempel)
